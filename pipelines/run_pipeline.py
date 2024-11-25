@@ -107,11 +107,11 @@
 #         sys.exit(1)
 
 
-if __name__ == "__main__":
-    # main()
-    import json
-    from sagemaker.workflow.pipeline import Pipeline
-    pipeline = Pipeline(
-        name="LightGBM-ML-Pipeline-Test")
-    execution=pipeline.start()
-    print(f"\n###### Execution started with PipelineExecutionArn: {execution.arn}")
+
+# main()
+import json
+from sagemaker.workflow.pipeline import Pipeline
+pipeline = Pipeline(
+    name="LightGBM-ML-Pipeline-Test")
+execution=pipeline.start()
+print(f"\n###### Execution started with PipelineExecutionArn: {execution.arn}")
