@@ -108,4 +108,9 @@ def main():  # pragma: no cover
 
 
 if __name__ == "__main__":
-    main()
+    # main()
+    import json
+    from sagemaker.workflow.pipeline import Pipeline
+    pipeline = Pipeline(
+        name="LightGBM-ML-Pipeline-Test")
+    pipeline.start()
