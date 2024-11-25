@@ -21,7 +21,13 @@
 # from pipelines._utils import get_pipeline_driver, convert_struct, get_pipeline_custom_tags
 
 
-# def main():  # pragma: no cover
+def main():  # pragma: no cover
+    import json
+    from sagemaker.workflow.pipeline import Pipeline
+    pipeline = Pipeline(
+        name="LightGBM-ML-Pipeline-Test")
+    execution=pipeline.start()
+    print(f"\n###### Execution started with PipelineExecutionArn: {execution.arn}")
 #     """The main harness that creates or updates and runs the pipeline.
 
 #     Creates or updates the pipeline and runs it.
@@ -107,11 +113,6 @@
 #         sys.exit(1)
 
 
-
-# main()
-import json
-from sagemaker.workflow.pipeline import Pipeline
-pipeline = Pipeline(
-    name="LightGBM-ML-Pipeline-Test")
-execution=pipeline.start()
-print(f"\n###### Execution started with PipelineExecutionArn: {execution.arn}")
+if __name__ == "__main__":
+    main()
+    
