@@ -33,22 +33,47 @@ from sagemaker.workflow.condition_step import (
 from sagemaker.workflow.functions import (
     JsonGet,
 )
-from sagemaker.workflow.parameters import (
-    ParameterInteger,
-    ParameterString,
-)
 from sagemaker.workflow.pipeline import Pipeline
 from sagemaker.workflow.properties import PropertyFile
 from sagemaker.workflow.steps import (
     ProcessingStep,
     TrainingStep,
 )
+from sagemaker.workflow.conditions import ConditionGreaterThan,ConditionEquals
+from sagemaker.workflow.condition_step import ConditionStep
+from sagemaker.workflow.functions import JsonGet
 from sagemaker.workflow.model_step import ModelStep
 from sagemaker.model import Model
 from sagemaker.workflow.pipeline_context import PipelineSession
+from sagemaker.estimator import Estimator
+from sagemaker.inputs import TrainingInput
+from sagemaker.tuner import (
+    IntegerParameter,
+    CategoricalParameter,
+    ContinuousParameter,
+    HyperparameterTuner,
+)
+from sagemaker.workflow.steps import TuningStep
+from sagemaker.estimator import Estimator
+import random
+from sagemaker import image_uris, model_uris, script_uris
+from sagemaker.workflow.steps import TrainingStep
+import json
+
+from sagemaker import hyperparameters
+from sagemaker.workflow.parameters import (
+    ParameterInteger,
+    ParameterString,
+    ParameterFloat,
+    ParameterBoolean
+)
+from sagemaker.workflow.functions import Join
 
 
-BASE_DIR = os.path.dirname(os.path.realpath(__file__))
+print(os.getcwd())
+
+
+# BASE_DIR = os.path.dirname(os.path.realpath(__file__))
 
 def get_sagemaker_client(region):
      """Gets the sagemaker client.
@@ -141,79 +166,192 @@ def get_pipeline(
     Returns:
         an instance of a pipeline
     """
+    import json
+    # Read Default Config from Configuration File
+    with open("train_config.json", "r") as f:
+        training_config=json.load(f)
+    
+    # LightGBM tunable parameters for SageMaker Pipelines
+    learning_rate_min = ParameterFloat(name="LearningRateMin", default_value=float(training_config["LearningRateMin"]))
+    learning_rate_max = ParameterFloat(name="LearningRateMax", default_value=float(training_config["LearningRateMax"]))
+
+    num_boost_round_min = ParameterInteger(name="NumberOfBoostRoundMin", default_value=int(training_config["NumberOfBoostRoundMin"]))
+    num_boost_round_max = ParameterInteger(name="NumberOfBoostRoundMax", default_value=int(training_config["NumberOfBoostRoundMax"]))
+
+    num_leaves_min = ParameterInteger(name="NumLeavesMin", default_value=int(training_config["NumLeavesMin"]))
+    num_leaves_max = ParameterInteger(name="NumLeavesMax", default_value=int(training_config["NumLeavesMax"]))
+
+    feature_fraction_min = ParameterFloat(name="FeatureFractionMin", default_value=float(training_config["FeatureFractionMin"]))
+    feature_fraction_max = ParameterFloat(name="FeatureFractionMax", default_value=float(training_config["FeatureFractionMax"]))
+
+    bagging_fraction_min = ParameterFloat(name="BaggingFractionMin", default_value=float(training_config["BaggingFractionMin"]))
+    bagging_fraction_max = ParameterFloat(name="BaggingFractionMax", default_value=float(training_config["BaggingFractionMax"]))
+
+    bagging_freq_min = ParameterInteger(name="BaggingFreqMin", default_value=int(training_config["BaggingFreqMin"]))
+    bagging_freq_max = ParameterInteger(name="BaggingFreqMax", default_value=int(training_config["BaggingFreqMax"]))
+
+    max_depth_min = ParameterInteger(name="MaxDepthMin", default_value=int(training_config["MaxDepthMin"]))
+    max_depth_max = ParameterInteger(name="MaxDepthMax", default_value=int(training_config["MaxDepthMax"]))
+
+    min_data_in_leaf_min = ParameterInteger(name="MinDataInLeafMin", default_value=int(training_config["MinDataInLeafMin"]))
+    min_data_in_leaf_max = ParameterInteger(name="MinDataInLeafMax", default_value=int(training_config["MinDataInLeafMax"]))
+
+    tuner_objective_metric = ParameterString(name="TunerObjectiveMetric", default_value=training_config["TunerObjectiveMetric"])
+    tuner_metric_definition = ParameterString(name="TunerMetricDefinition", default_value=training_config["TunerMetricDefinition"])
+    algo_metric = ParameterString(name="AlgorithmMetric", default_value=training_config["AlgorithmMetric"])
+
+    max_tuning_jobs = ParameterInteger(name="MaxTuningJobs", default_value=int(training_config["MaxTuningJobs"]))
+    max_tuning_parallel_job = ParameterInteger(name="TuningParallelJobs", default_value=int(training_config["TuningParallelJobs"]))
+    tuning_strategy = ParameterString(name="TuningStrategy", default_value=training_config["TuningStrategy"], enum_values=["Bayesian", "Random", "Grid", "Hyperband"])
+    optimization_direction = ParameterString(name="OptimizationDirection", default_value=training_config["OptimizationDirection"], enum_values=["Maximize", "Minimize"])
+    supervised_training_task = ParameterString(name="TrainingTask", default_value=training_config["TrainingTask"], enum_values=["classification", "regression"])
+
+    # Infra Parameters
+    processing_instance_count = ParameterInteger(name="ProcessingInstanceCount", default_value=int(training_config["ProcessingInstanceCount"]))
+    processing_instance_type = ParameterString(name="ProcessingInstanceType", default_value=training_config["ProcessingInstanceType"])
+    training_instance_type = ParameterString(name="TrainingInstanceType", default_value=training_config["TrainingInstanceType"])
+    training_instance_count = ParameterInteger(name="TrainingInstanceCount", default_value=int(training_config["TrainingInstanceCount"]))
+    training_volume_size = ParameterInteger(name="TrainingVolumeSize", default_value=int(training_config["TrainingVolumeSize"]))
+    processing_volume_size = ParameterInteger(name="ProcessingVolumeSize", default_value=int(training_config["ProcessingVolumeSize"]))
+
+    # Artifacts location Parameters
+    model_approval_status = ParameterString(name="ModelApprovalStatus", default_value=training_config["ModelApprovalStatus"])
+    model_output_bucket = ParameterString(name="ModelOutput", default_value=training_config["ModelOutput"])
+    train_output_bucket = ParameterString(name="TrainOutput", default_value=training_config["TrainOutput"])
+    validation_output_bucket = ParameterString(name="ValidationOutput", default_value=training_config["ValidationOutput"])
+    test_output_bucket = ParameterString(name="TestOutput", default_value=training_config["TestOutput"])
+    s3_input_data_location = ParameterString(name="S3InputDataURI", default_value=training_config["S3InputDataURI"])
+
+    # Mlflow
+    ml_flow_arn = ParameterString(name="MLflow", default_value=training_config["MLflow"])
+
+    model_evaluation_threshold = ParameterFloat(name="EvalThreshold", default_value=float(training_config["EvalThreshold"]))
+    data_split_ratio = ParameterString(name="DataSplitRatio", default_value=training_config["DataSplitRatio"])
+
+    
     sagemaker_session = get_session(region, default_bucket)
     if role is None:
         role = sagemaker.session.get_execution_role(sagemaker_session)
 
     pipeline_session = get_pipeline_session(region, default_bucket)
 
-    # parameters for pipeline execution
-    processing_instance_count = ParameterInteger(name="ProcessingInstanceCount", default_value=1)
-    model_approval_status = ParameterString(
-        name="ModelApprovalStatus", default_value="PendingManualApproval"
-    )
-    input_data = ParameterString(
-        name="InputDataUrl",
-        default_value=f"s3://sagemaker-servicecatalog-seedcode-{region}/dataset/abalone-dataset.csv",
-    )
-
+   
     # processing step for feature engineering
+    framework_version = "1.0-1"
     sklearn_processor = SKLearnProcessor(
-        framework_version="0.23-1",
+        framework_version=framework_version,
         instance_type=processing_instance_type,
         instance_count=processing_instance_count,
-        base_job_name=f"{base_job_prefix}/sklearn-abalone-preprocess",
-        sagemaker_session=pipeline_session,
+        volume_size_in_gb = processing_volume_size,
+        base_job_name="sklearn-pre-process",
         role=role,
+        sagemaker_session=pipeline_session,
     )
-    step_args = sklearn_processor.run(
-        outputs=[
-            ProcessingOutput(output_name="train", source="/opt/ml/processing/train"),
-            ProcessingOutput(output_name="validation", source="/opt/ml/processing/validation"),
-            ProcessingOutput(output_name="test", source="/opt/ml/processing/test"),
+    processor_args = sklearn_processor.run(
+        inputs=[
+          ProcessingInput(source=s3_input_data_location, destination="/opt/ml/processing/input"),  
         ],
-        code=os.path.join(BASE_DIR, "preprocess.py"),
-        arguments=["--input-data", input_data],
+        outputs=[
+            ProcessingOutput(output_name="train", source="/opt/ml/processing/train",\
+                             destination = train_output_bucket),
+            ProcessingOutput(output_name="validation", source="/opt/ml/processing/validation",\
+                            destination = validation_output_bucket),
+            ProcessingOutput(output_name="test", source="/opt/ml/processing/test",\
+                            destination = test_output_bucket)
+        ],
+        code="pipeline_scripts/churn_preprocess.py",
+        arguments =[
+            "--split-ratio",data_split_ratio
+        ],
     )
-    step_process = ProcessingStep(
-        name="PreprocessAbaloneData",
-        step_args=step_args,
-    )
+    step_process = ProcessingStep(name="LightGBMDataPreProcess", step_args=processor_args)
 
     # training step for generating model artifacts
-    model_path = f"s3://{sagemaker_session.default_bucket()}/{base_job_prefix}/AbaloneTrain"
-    image_uri = sagemaker.image_uris.retrieve(
-        framework="xgboost",
-        region=region,
-        version="1.0-1",
-        py_version="py3",
+    
+    
+    train_model_id, train_model_version, train_scope = "lightgbm-classification-model", "*", "training"
+
+
+    # # Retrieve the docker image
+    train_image_uri = image_uris.retrieve(
+        region=None,
+        framework=None,
+        model_id=train_model_id,
+        model_version=train_model_version,
+        image_scope=train_scope,
         instance_type=training_instance_type,
     )
-    xgb_train = Estimator(
-        image_uri=image_uri,
-        instance_type=training_instance_type,
-        instance_count=1,
-        output_path=model_path,
-        base_job_name=f"{base_job_prefix}/abalone-train",
-        sagemaker_session=pipeline_session,
+
+    # Retrieve the pre-trained model tarball to further fine-tune
+    train_model_uri = model_uris.retrieve(
+        model_id=train_model_id, model_version=train_model_version, model_scope=train_scope
+    )
+    # Retrieve the default hyper-parameters for fine-tuning the model
+    hyperparameters = hyperparameters.retrieve_default(
+        model_id=train_model_id, model_version=train_model_version
+    )
+
+    # [Optional] Override default hyperparameters with custom values
+    hyperparameters["num_boost_round"] = "200"
+    hyperparameters["metric"] = algo_metric # pipeline parameter
+
+    # Recommended for distributed training
+    hyperparameters["tree_learner"] = "voting" 
+    del hyperparameters["early_stopping_rounds"]
+
+    print(hyperparameters)
+
+    # Create SageMaker Estimator instance
+    tabular_estimator = Estimator(
         role=role,
+        image_uri=train_image_uri,
+        source_dir= "model_cat", 
+        model_uri=train_model_uri,
+        entry_point="train.py", 
+        instance_count= training_instance_count,  # pipeline paramter
+        volume_size=training_volume_size,  # pipeline paramter
+        instance_type=training_instance_type, # pipeline paramter
+        max_run=360000,
+        hyperparameters=hyperparameters,
+        output_path=model_output_bucket,
+        sagemaker_session=pipeline_session, # Tells it its part of a Sagemaker Pipeline and not to execute individually
+        environment={"MLFLOW_TRACKING_ARN": ml_flow_arn}, # pipeline paramter
+        keep_alive_period_in_seconds = 1000 #Keep instance warm for fast experimentation iteration else experience cold start for each trials (note you will incur cost of warm instances)
     )
-    xgb_train.set_hyperparameters(
-        objective="reg:linear",
-        num_round=50,
-        max_depth=5,
-        eta=0.2,
-        gamma=4,
-        min_child_weight=6,
-        subsample=0.7,
-        silent=0,
-    )
-    step_args = xgb_train.fit(
+    
+    
+    from sagemaker.tuner import ContinuousParameter, IntegerParameter, HyperparameterTuner
+
+    # Define hyperparameter ranges (Pipeline parameters)
+    hyperparameter_ranges_lgb = {
+        "learning_rate": ContinuousParameter(learning_rate_min , learning_rate_max , scaling_type="Auto"),
+        "num_boost_round": IntegerParameter(num_boost_round_min , num_boost_round_max),
+        "num_leaves": IntegerParameter(num_leaves_min , num_leaves_max),
+        "feature_fraction": ContinuousParameter(feature_fraction_min, feature_fraction_max),
+        "bagging_fraction": ContinuousParameter(bagging_fraction_min, bagging_fraction_max),
+        "bagging_freq": IntegerParameter(bagging_freq_min, bagging_freq_max),
+        "max_depth": IntegerParameter(max_depth_min, max_depth_max),
+        "min_data_in_leaf": IntegerParameter(min_data_in_leaf_min, min_data_in_leaf_max),
+    }
+
+
+
+    tuner = HyperparameterTuner(
+        estimator = tabular_estimator,
+        objective_metric_name = tuner_objective_metric, # pipeline paramter
+        hyperparameter_ranges = hyperparameter_ranges_lgb,  # pipeline paramter
+        metric_definitions = [{"Name": tuner_objective_metric, "Regex": Join(on=':',values=[tuner_objective_metric ," ([0-9\\.]+)" ] )}], # pipeline paramter
+        max_jobs=max_tuning_jobs, # pipeline paramter
+        max_parallel_jobs=max_tuning_parallel_job, # pipeline paramter
+        objective_type=optimization_direction, # pipeline paramter
+        strategy = tuning_strategy # pipeline paramter
+    ) 
+
+    # Here we create an implicit dependencies between the processing step and Tuning step
+    hpo_args = tuner.fit(
         inputs={
             "train": TrainingInput(
-                s3_data=step_process.properties.ProcessingOutputConfig.Outputs[
-                    "train"
-                ].S3Output.S3Uri,
+                s3_data=step_process.properties.ProcessingOutputConfig.Outputs["train"].S3Output.S3Uri,
                 content_type="text/csv",
             ),
             "validation": TrainingInput(
@@ -222,108 +360,188 @@ def get_pipeline(
                 ].S3Output.S3Uri,
                 content_type="text/csv",
             ),
-        },
-    )
-    step_train = TrainingStep(
-        name="TrainAbaloneModel",
-        step_args=step_args,
+        }
     )
 
-    # processing step for evaluation
-    script_eval = ScriptProcessor(
-        image_uri=image_uri,
-        command=["python3"],
-        instance_type=processing_instance_type,
-        instance_count=1,
-        base_job_name=f"{base_job_prefix}/script-abalone-eval",
-        sagemaker_session=pipeline_session,
-        role=role,
+    step_tuning = TuningStep(
+        name="LightGBMClassifierHyperParameterTuning",
+        step_args=hpo_args,
     )
-    step_args = script_eval.run(
-        inputs=[
-            ProcessingInput(
-                source=step_train.properties.ModelArtifacts.S3ModelArtifacts,
-                destination="/opt/ml/processing/model",
+    
+    
+    
+    
+    
+    train_model_id, train_model_version, train_scope = "lightgbm-regression-model", "*", "training"
+
+
+    # Retrieve the docker image
+    train_image_uri = image_uris.retrieve(
+        region=None,
+        framework=None,
+        model_id=train_model_id,
+        model_version=train_model_version,
+        image_scope=train_scope,
+        instance_type=training_instance_type,
+    )
+
+    # Retrieve the pre-trained model tarball to further fine-tune
+    train_model_uri = model_uris.retrieve(
+        model_id=train_model_id, model_version=train_model_version, model_scope=train_scope
+    )
+    # Retrieve the default hyper-parameters for fine-tuning the model
+    hyperparameters = hyperparameters.retrieve_default(
+        model_id=train_model_id, model_version=train_model_version
+    )
+
+    # [Optional] Override default hyperparameters with custom values
+    hyperparameters["num_boost_round"] = "200"
+    hyperparameters["metric"] = algo_metric
+
+    # Recommended for distributed training
+    hyperparameters["tree_learner"] = "voting" 
+    del hyperparameters["early_stopping_rounds"]
+    print(hyperparameters)
+
+    # Create SageMaker Estimator instance
+    reg_estimator = Estimator(
+        role=role,
+        image_uri=train_image_uri,
+        source_dir= "model_reg", 
+        model_uri=train_model_uri,
+        entry_point="train.py", 
+        instance_count= training_instance_count,  
+        volume_size=training_volume_size, 
+        instance_type=training_instance_type,
+        max_run=360000,
+        hyperparameters=hyperparameters,
+        output_path=model_output_bucket,
+        sagemaker_session=pipeline_session, # Tells it its part of a Sagemaker Pipeline and not to execute individually
+        environment={"MLFLOW_TRACKING_ARN": ml_flow_arn},
+        keep_alive_period_in_seconds = 1000 #Keep instance warm for fast experimentation iteration else experience cold start for each trials (note you will incur cost of warm instances)
+    )
+    
+   
+    # Define hyperparameter ranges
+    hyperparameter_ranges_lgb = {
+        "learning_rate": ContinuousParameter(learning_rate_min , learning_rate_max , scaling_type="Auto"),
+      "num_boost_round": IntegerParameter(num_boost_round_min , num_boost_round_max),
+        "num_leaves": IntegerParameter(num_leaves_min , num_leaves_max),
+        "feature_fraction": ContinuousParameter(feature_fraction_min, feature_fraction_max),
+        "bagging_fraction": ContinuousParameter(bagging_fraction_min, bagging_fraction_max),
+        "bagging_freq": IntegerParameter(bagging_freq_min, bagging_freq_max),
+        "max_depth": IntegerParameter(max_depth_min, max_depth_max),
+        "min_data_in_leaf": IntegerParameter(min_data_in_leaf_min, min_data_in_leaf_max),
+    }
+
+    tuner_reg = HyperparameterTuner(
+        estimator = reg_estimator,
+        objective_metric_name = tuner_objective_metric,
+        hyperparameter_ranges = hyperparameter_ranges_lgb, 
+        metric_definitions = [{"Name": tuner_objective_metric, "Regex": Join(on=':',values=[tuner_objective_metric ," ([0-9\\.]+)" ] )}],
+        max_jobs=max_tuning_jobs,
+        max_parallel_jobs=max_tuning_parallel_job, 
+        objective_type=optimization_direction,
+        strategy = tuning_strategy)
+
+    # Here we create an implicit dependencies between the processing step and Tuning step
+    hpo_args_reg = tuner_reg.fit(
+        inputs={
+            "train": TrainingInput(
+                s3_data=step_process.properties.ProcessingOutputConfig.Outputs["train"].S3Output.S3Uri,
+                content_type="text/csv",
             ),
-            ProcessingInput(
-                source=step_process.properties.ProcessingOutputConfig.Outputs[
-                    "test"
+            "validation": TrainingInput(
+                s3_data=step_process.properties.ProcessingOutputConfig.Outputs[
+                    "validation"
                 ].S3Output.S3Uri,
-                destination="/opt/ml/processing/test",
+                content_type="text/csv",
             ),
-        ],
-        outputs=[
-            ProcessingOutput(output_name="evaluation", source="/opt/ml/processing/evaluation"),
-        ],
-        code=os.path.join(BASE_DIR, "evaluate.py"),
-    )
-    evaluation_report = PropertyFile(
-        name="AbaloneEvaluationReport",
-        output_name="evaluation",
-        path="evaluation.json",
-    )
-    step_eval = ProcessingStep(
-        name="EvaluateAbaloneModel",
-        step_args=step_args,
-        property_files=[evaluation_report],
+        }
     )
 
-    # register model step that will be conditionally executed
-    model_metrics = ModelMetrics(
-        model_statistics=MetricsSource(
-            s3_uri="{}/evaluation.json".format(
-                step_eval.arguments["ProcessingOutputConfig"]["Outputs"][0]["S3Output"]["S3Uri"]
-            ),
-            content_type="application/json"
-        )
-    )
-    model = Model(
-        image_uri=image_uri,
-        model_data=step_train.properties.ModelArtifacts.S3ModelArtifacts,
-        sagemaker_session=pipeline_session,
-        role=role,
-    )
-    step_args = model.register(
-        content_types=["text/csv"],
-        response_types=["text/csv"],
-        inference_instances=["ml.t2.medium", "ml.m5.large"],
-        transform_instances=["ml.m5.large"],
-        model_package_group_name=model_package_group_name,
-        approval_status=model_approval_status,
-        model_metrics=model_metrics,
-    )
-    step_register = ModelStep(
-        name="RegisterAbaloneModel",
-        step_args=step_args,
+    step_tuning_reg = TuningStep(
+        name="LightGBMHyperParameterTuningRegression",
+        step_args=hpo_args_reg,
     )
 
-    # condition step for evaluating model quality and branching execution
-    cond_lte = ConditionLessThanOrEqualTo(
-        left=JsonGet(
-            step_name=step_eval.name,
-            property_file=evaluation_report,
-            json_path="regression_metrics.mse.value"
-        ),
-        right=6.0,
+
+
+    # Define Condition. Here we evaluate the condition based on the training task passed as a pipeline parameter 
+    cond_task = ConditionEquals(
+        left=supervised_training_task,
+        right="classification",
     )
+
+    # Condition Step
+    """
+    Here we create a condition syep to swith the branch based on training task type. 
+    Run Classifier tuner if its a classification model or Regression tuner if its a regression model
+    """
     step_cond = ConditionStep(
-        name="CheckMSEAbaloneEvaluation",
-        conditions=[cond_lte],
-        if_steps=[step_register],
-        else_steps=[],
-    )
+        depends_on = [step_process], # Depends on the processing step
+        name="TrainingTaskTypes",
+        conditions=[cond_task], 
+        if_steps=[step_tuning], # If condition is true
+        else_steps=[step_tuning_reg] # If condition is false
+    )    
 
-    # pipeline instance
+    
+    
+    
+    import json
+    from sagemaker.workflow.pipeline import Pipeline
+
     pipeline = Pipeline(
         name=pipeline_name,
         parameters=[
-            processing_instance_type,
+            # LightGBM tunable parameters
+            learning_rate_min,
+            learning_rate_max,
+            num_leaves_min,
+            num_leaves_max,
+            feature_fraction_min,
+            feature_fraction_max,
+            bagging_fraction_min,
+            bagging_fraction_max,
+            bagging_freq_min,
+            bagging_freq_max,
+            max_depth_min,
+            max_depth_max,
+            min_data_in_leaf_min,
+            min_data_in_leaf_max,
+            num_boost_round_max,
+            num_boost_round_min,
+
+            # Other parameters
+            processing_volume_size,
+            training_volume_size,
+            tuner_metric_definition,
+            tuner_objective_metric,
+            algo_metric,
             processing_instance_count,
+            processing_instance_type,
             training_instance_type,
+            training_instance_count,
             model_approval_status,
-            input_data,
+            model_output_bucket,
+            train_output_bucket,
+            validation_output_bucket,
+            test_output_bucket,
+            max_tuning_jobs,
+            max_tuning_parallel_job,
+            tuning_strategy,
+            optimization_direction,
+            ml_flow_arn,
+            supervised_training_task,
+            model_evaluation_threshold,
+            s3_input_data_location,
+            data_split_ratio,
         ],
-        steps=[step_process, step_train, step_eval, step_cond],
-        sagemaker_session=pipeline_session,
+        steps=[step_cond], # we pass only the condition step as we have declared all steps as dependencies to the condition step
     )
+
+    # definition = json.loads(pipeline.definition())
+    # print(definition)
+    
     return pipeline

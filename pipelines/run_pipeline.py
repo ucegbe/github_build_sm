@@ -21,98 +21,41 @@
 # from pipelines._utils import get_pipeline_driver, convert_struct, get_pipeline_custom_tags
 
 
-def main():  # pragma: no cover
-    import json
-    from sagemaker.workflow.pipeline import Pipeline
-    pipeline = Pipeline(
-        name="LightGBM-ML-Pipeline-Test")
-    execution=pipeline.start()
-    print(f"\n###### Execution started with PipelineExecutionArn: {execution.arn}")
-#     """The main harness that creates or updates and runs the pipeline.
+# def main():  # pragma: no cover
+#     import json
+#     from sagemaker.workflow.pipeline import Pipeline
+#     pipeline = Pipeline(
+#         name="LightGBM-ML-Pipeline-Test")
+#     execution=pipeline.start()
+#     print(f"\n###### Execution started with PipelineExecutionArn: {execution.arn}")
+# #     """The main harness that creates or updates and runs the pipeline.
 
-#     Creates or updates the pipeline and runs it.
-#     """
-#     parser = argparse.ArgumentParser(
-#         "Creates or updates and runs the pipeline for the pipeline script."
-#     )
 
-#     parser.add_argument(
-#         "-n",
-#         "--module-name",
-#         dest="module_name",
-#         type=str,
-#         help="The module name of the pipeline to import.",
-#     )
-#     parser.add_argument(
-#         "-kwargs",
-#         "--kwargs",
-#         dest="kwargs",
-#         default=None,
-#         help="Dict string of keyword arguments for the pipeline generation (if supported)",
-#     )
-#     parser.add_argument(
-#         "-role-arn",
-#         "--role-arn",
-#         dest="role_arn",
-#         type=str,
-#         help="The role arn for the pipeline service execution role.",
-#     )
-#     parser.add_argument(
-#         "-description",
-#         "--description",
-#         dest="description",
-#         type=str,
-#         default=None,
-#         help="The description of the pipeline.",
-#     )
-#     parser.add_argument(
-#         "-tags",
-#         "--tags",
-#         dest="tags",
-#         default=None,
-#         help="""List of dict strings of '[{"Key": "string", "Value": "string"}, ..]'""",
-#     )
-#     args = parser.parse_args()
+import sys
+import argparse
+from abalone.pipeline import get_pipeline  # Replace 'your_module' with the actual module name
 
-#     if args.module_name is None or args.role_arn is None:
-#         parser.print_help()
-#         sys.exit(2)
-#     tags = convert_struct(args.tags)
+def main():
+    parser = argparse.ArgumentParser(description="Run the Abalone Pipeline")
+    parser.add_argument("--region", type=str, required=True, help="AWS region")
+    parser.add_argument("--role", type=str, help="IAM role ARN")
+    parser.add_argument("--default-bucket", type=str, help="Default S3 bucket")
+    parser.add_argument("--pipeline-name", type=str, default="AbalonePipeline", help="Pipeline name")
+    parser.add_argument("--base-job-prefix", type=str, default="Abalone", help="Base job prefix")
+    args = parser.parse_args()
 
-#     try:
-#         pipeline = get_pipeline_driver(args.module_name, args.kwargs)
-#         print("###### Creating/updating a SageMaker Pipeline with the following definition:")
-#         parsed = json.loads(pipeline.definition())
-#         print(json.dumps(parsed, indent=2, sort_keys=True))
+    pipeline = get_pipeline(
+        region=args.region,
+        role=args.role,
+        default_bucket=args.default_bucket,
+        pipeline_name=args.pipeline_name,
+        base_job_prefix=args.base_job_prefix,
+    )
 
-#         all_tags = get_pipeline_custom_tags(args.module_name, args.kwargs, tags)
-
-#         upsert_response = pipeline.upsert(
-#             role_arn=args.role_arn, description=args.description, tags=all_tags
-#         )
-#         print("\n###### Created/Updated SageMaker Pipeline: Response received:")
-#         print(upsert_response)
-
-#         execution = pipeline.start()
-#         print(f"\n###### Execution started with PipelineExecutionArn: {execution.arn}")
-
-#         print("Waiting for the execution to finish...")
-
-#         # Setting the attempts and delay (in seconds) will modify the overall time the pipeline waits. 
-#         # If the execution is taking a longer time, update these parameters to a larger value.
-#         # Eg: The total wait time is calculated as 60 * 120 = 7200 seconds (2 hours)
-#         execution.wait(max_attempts=120, delay=60)
-        
-#         print("\n#####Execution completed. Execution step details:")
-
-#         print(execution.list_steps())
-#         # Todo print the status?
-#     except Exception as e:  # pylint: disable=W0703
-#         print(f"Exception: {e}")
-#         traceback.print_exc()
-#         sys.exit(1)
-
+    # You can add additional logic here to work with the pipeline object
+    print(f"Pipeline created with name: {pipeline.name}")
 
 if __name__ == "__main__":
     main()
+
     
