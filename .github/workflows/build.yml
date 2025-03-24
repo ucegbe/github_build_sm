@@ -23,7 +23,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade . botocore boto3 awscli
+          python -m pip install --upgrade . botocore boto3 awscli sagemaker
 
       - name: Configure AWS Credentials
         id: aws_creds
