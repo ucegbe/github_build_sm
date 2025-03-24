@@ -5,7 +5,6 @@ import os
 import pathlib
 import requests
 import tempfile
-import os
 import boto3
 import numpy as np
 import pandas as pd
