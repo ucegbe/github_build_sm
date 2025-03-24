@@ -9,7 +9,7 @@
 Implements a get_pipeline(**kwargs) method.
 """
 import os
-
+import os
 import boto3
 import sagemaker
 import sagemaker.session
