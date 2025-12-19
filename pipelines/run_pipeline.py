@@ -25,7 +25,7 @@ def main():  # pragma: no cover
     import json
     from sagemaker.workflow.pipeline import Pipeline
     with open("train_config.json", "r") as f:
-        training_config=json.load(f)
+        training_config = json.load(f)
     pipeline = Pipeline(
         name=training_config["PipelineName"])
     execution = pipeline.start()
