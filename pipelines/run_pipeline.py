@@ -169,9 +169,9 @@ def get_pipeline_custom_tags(new_tags, region, sagemaker_project_arn=None):
 def get_pipeline(
     region="us-east-1",
     sagemaker_project_arn=None,
-    role=None,
-    default_bucket=None,
-    model_package_group_name="AbalonePackageGroup",
+    role="arn:aws:iam::734584155256:role/service-role/AmazonSageMaker-ExecutionRole-20221023T222844",
+    default_bucket="mm-fsi-fix",
+    model_package_group_name="Mlops",
     pipeline_name="AbalonePipeline",
     base_job_prefix="Abalone",
     processing_instance_type="ml.m5.xlarge",
