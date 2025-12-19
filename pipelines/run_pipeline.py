@@ -18,7 +18,8 @@ def main():  # pragma: no cover
             TunerObjectiveMetric = "auc",
             TunerMetricDefinition="auc: ([0-9\\.]+)",
             OptimizationDirection = "Maximize",
-            NumLeavesMin = 20
+            NumLeavesMin = 10,
+            NumLeavesMax = 100
         )
     )
 
