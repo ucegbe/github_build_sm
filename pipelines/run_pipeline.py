@@ -12,6 +12,7 @@
 # language governing permissions and limitations under the License.
 """A CLI to create or update and run pipelines."""
 # from __future__ import absolute_import
+
 # import argparse
 import json
 # import sys
@@ -166,7 +167,7 @@ def get_pipeline_custom_tags(new_tags, region, sagemaker_project_arn=None):
 
 
 def get_pipeline(
-    region,
+    region="us-east-1",
     sagemaker_project_arn=None,
     role=None,
     default_bucket=None,
@@ -577,7 +578,6 @@ if __name__ == "__main__":
     main()
 
 # def main():  # pragma: no cover
-<<<<<<< HEAD
 #     import json
 #     # from sagemaker.workflow.pipeline import Pipeline
 #     # with open("train_config.json", "r") as f:
@@ -618,56 +618,4 @@ if __name__ == "__main__":
 # if __name__ == "__main__":
 #     main()
 
-=======
-#     pipeline = get_pipeline()
-#     pipeline.upsert(role_arn="arn:aws:iam::734584155256:role/service-role/AmazonSageMaker-ExecutionRole-20221023T222844")
-#     # start Pipeline execution
-#     pipeline.start()
-
-
-# if __name__ == "__main__":
-#     main()
-
-# # def main():  # pragma: no cover
-# #     import json
-# #     # from sagemaker.workflow.pipeline import Pipeline
-# #     # with open("train_config.json", "r") as f:
-# #     #     training_config = json.load(f)
-# #     # pipeline = Pipeline(
-# #     #     name=training_config["PipelineName"])
-# #     # execution = pipeline.start()
-# #     pipeline = pipeline_files.get_pipeline()
-# #     pipeline.upsert(role_arn="arn:aws:iam::734584155256:role/service-role/AmazonSageMaker-ExecutionRole-20221023T222844")
-# #     # print(f"\n###### Execution started with PipelineExecutionArn: {execution.arn}")
-# # # #     """The main harness that creates or updates and runs the pipeline.
-
-
-# # # import sys
-# # # import argparse
-# # # from abalone.pipeline import get_pipeline  # Replace 'your_module' with the actual module name
-
-# # # def main():
-# # #     parser = argparse.ArgumentParser(description="Run the Abalone Pipeline")
-# # #     parser.add_argument("--region", type=str, required=True, help="AWS region")
-# # #     parser.add_argument("--role", type=str, help="IAM role ARN")
-# # #     parser.add_argument("--default-bucket", type=str, help="Default S3 bucket")
-# # #     parser.add_argument("--pipeline-name", type=str, default="AbalonePipeline", help="Pipeline name")
-# # #     parser.add_argument("--base-job-prefix", type=str, default="Abalone", help="Base job prefix")
-# # #     args = parser.parse_args()
-
-# # #     pipeline = get_pipeline(
-# # #         region=args.region,
-# # #         role=args.role,
-# # #         default_bucket=args.default_bucket,
-# # #         pipeline_name=args.pipeline_name,
-# # #         base_job_prefix=args.base_job_prefix,
-# # #     )
-
-# # #     # You can add additional logic here to work with the pipeline object
-# # #     print(f"Pipeline created with name: {pipeline.name}")
-
-# # if __name__ == "__main__":
-# #     main()
-
->>>>>>> 86ddb760d9946608fef9aaf24adbfede21856b40
     
