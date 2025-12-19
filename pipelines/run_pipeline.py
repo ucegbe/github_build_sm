@@ -24,9 +24,11 @@ import json
 def main():  # pragma: no cover
     import json
     from sagemaker.workflow.pipeline import Pipeline
+    with open("train_config.json", "r") as f:
+        training_config=json.load(f)
     pipeline = Pipeline(
-        name="LightGBM-ML-Pipeline-Test")
-    execution=pipeline.start()
+        name=training_config["PipelineName"])
+    execution = pipeline.start()
     print(f"\n###### Execution started with PipelineExecutionArn: {execution.arn}")
 # #     """The main harness that creates or updates and runs the pipeline.
 
