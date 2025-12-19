@@ -17,19 +17,24 @@
 import json
 # import sys
 # import traceback
+import pipeline_files
 
 # from pipelines._utils import get_pipeline_driver, convert_struct, get_pipeline_custom_tags
 
 
 def main():  # pragma: no cover
     import json
-    from sagemaker.workflow.pipeline import Pipeline
-    with open("train_config.json", "r") as f:
-        training_config = json.load(f)
-    pipeline = Pipeline(
-        name=training_config["PipelineName"])
-    execution = pipeline.start()
-    print(f"\n###### Execution started with PipelineExecutionArn: {execution.arn}")
+    # from sagemaker.workflow.pipeline import Pipeline
+    # with open("train_config.json", "r") as f:
+    #     training_config = json.load(f)
+    # pipeline = Pipeline(
+    #     name=training_config["PipelineName"])
+    # execution = pipeline.start()
+
+
+    pipeline = pipeline_files.get_pipeline()
+    pipeline.upsert(role_arn="arn:aws:iam::734584155256:role/service-role/AmazonSageMaker-ExecutionRole-20221023T222844")
+    # print(f"\n###### Execution started with PipelineExecutionArn: {execution.arn}")
 # #     """The main harness that creates or updates and runs the pipeline.
 
 
