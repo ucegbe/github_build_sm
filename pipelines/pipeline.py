@@ -544,3 +544,12 @@ def get_pipeline(
     return pipeline
 
 
+def main():  # pragma: no cover
+    pipeline = get_pipeline()
+    pipeline.upsert(role_arn="arn:aws:iam::734584155256:role/service-role/AmazonSageMaker-ExecutionRole-20221023T222844")
+    # start Pipeline execution
+    pipeline.start()
+
+
+if __name__ == "__main__":
+    main()
