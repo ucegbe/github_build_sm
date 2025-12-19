@@ -540,9 +540,6 @@ def get_pipeline(
         ],
         steps=[step_cond], # we pass only the condition step as we have declared all steps as dependencies to the condition step
     )
-
-    # definition = json.loads(pipeline.definition())
-    # print(definition)
     
     return pipeline
 
