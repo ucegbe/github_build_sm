@@ -35,4 +35,4 @@ jobs:
 
       - name: Build SageMaker Pipeline
         run: |          
-          run_pipeline           
+          python pipelines/run_pipeline.py          
