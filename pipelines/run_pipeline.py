@@ -30,8 +30,6 @@ def main():  # pragma: no cover
     # pipeline = Pipeline(
     #     name=training_config["PipelineName"])
     # execution = pipeline.start()
-
-
     pipeline = pipeline_files.get_pipeline()
     pipeline.upsert(role_arn="arn:aws:iam::734584155256:role/service-role/AmazonSageMaker-ExecutionRole-20221023T222844")
     # print(f"\n###### Execution started with PipelineExecutionArn: {execution.arn}")
