@@ -35,4 +35,4 @@ jobs:
 
       - name: Build SageMaker Pipeline
         run: |          
-          run-pipeline           
+          pipeline           
