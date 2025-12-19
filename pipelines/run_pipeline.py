@@ -25,6 +25,7 @@ def main():  # pragma: no cover
     
     with open("train_config.json", "r") as f:
         training_config = json.load(f)
+    print(training_config["PipelineName"])
     pipeline = Pipeline(
         name=training_config["PipelineName"])
     
